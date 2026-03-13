@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Datos (MVP)</title>
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librerías -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.25.0/dist/cytoscape.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -24,7 +22,6 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
 
-    <!-- Header -->
     <header class="bg-indigo-600 text-white p-4 shadow">
         <h1 class="text-xl font-bold">Visualizador de Datos</h1>
     </header>
@@ -38,6 +35,7 @@
                 <select id="viz-type" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500">
                     <option value="bar">Barras</option>
                     <option value="line">Líneas</option>
+                    <option value="pie">Circular (Pastel)</option>
                     <option value="network">Node-Link (Red)</option>
                     <option value="flowchart">Flowchart</option>
                 </select>
@@ -77,6 +75,11 @@
         let cyInstance = null;
         let nodeIdCounter = 0;
         const MAX_ROWS = 20;
+        
+        // Tipos compatibles (mantienen datos al cambiar)
+        const COMPATIBLE_TYPES = ['bar', 'line', 'pie'];
+        let lastCompatibleData = null;
+        let lastVizType = null;
 
         // --- DOM ---
         const vizSelect = document.getElementById('viz-type');
@@ -89,28 +92,44 @@
 
         // --- INICIALIZACIÓN ---
         vizSelect.addEventListener('change', () => {
-            clearState();
-            renderForm();
+            const newType = vizSelect.value;
+            const oldType = lastVizType;
+            
+            // ¿Mantener datos? Solo si ambos son compatibles (bar/line/pie)
+            const keepData = COMPATIBLE_TYPES.includes(newType) && 
+                            COMPATIBLE_TYPES.includes(oldType) && 
+                            lastCompatibleData;
+            
+            clearState(keepData);
+            renderForm(keepData);
+            lastVizType = newType;
         });
+        
         sourceRadios.forEach(r => r.addEventListener('change', () => {
-            clearState();
-            renderForm();
+            clearState(false);
+            renderForm(false);
+            lastVizType = vizSelect.value;
         }));
+        
         btnAdd.addEventListener('click', addRow);
         btnGenerate.addEventListener('click', handleGenerate);
         btnDownload.addEventListener('click', downloadPNG);
 
         // --- LÓGICA PRINCIPAL ---
-        function clearState() {
-            formContainer.innerHTML = '';
+        function clearState(keepData = false) {
             chartContainer.innerHTML = '<p class="text-gray-400">El gráfico aparecerá aquí</p>';
             btnDownload.classList.add('hidden');
             if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
             if (cyInstance) { cyInstance.destroy(); cyInstance = null; }
-            nodeIdCounter = 0;
+            
+            if (!keepData) {
+                formContainer.innerHTML = '';
+                nodeIdCounter = 0;
+                lastCompatibleData = null;
+            }
         }
 
-        function renderForm() {
+        function renderForm(keepData = false) {
             const viz = vizSelect.value;
             const isFile = document.querySelector('input[name="source"]:checked').value === 'file';
             
@@ -125,41 +144,54 @@
             }
 
             btnAdd.classList.remove('hidden');
-            // Encabezados
+            
             let headers = '';
-            if (viz === 'bar' || viz === 'line') headers = '<div class="grid grid-cols-2 gap-4 font-bold text-sm text-gray-600"><div>Etiqueta</div><div>Valor</div></div>';
-            if (viz === 'network') headers = '<div class="grid grid-cols-1 gap-2 font-bold text-sm text-gray-600"><div>Nodos (ID - Nombre)</div><div class="mt-4">Conexiones (Origen → Destino)</div></div>';
-            if (viz === 'flowchart') headers = '<div class="grid grid-cols-3 gap-4 font-bold text-sm text-gray-600"><div>ID Paso</div><div>Texto</div><div>Siguiente ID</div></div>';
+            if (COMPATIBLE_TYPES.includes(viz)) {
+                headers = '<div class="grid grid-cols-2 gap-4 font-bold text-sm text-gray-600"><div>Etiqueta</div><div>Valor</div></div>';
+            } else if (viz === 'network') {
+                headers = '<div class="grid grid-cols-1 gap-2 font-bold text-sm text-gray-600"><div>Nodos (ID - Nombre)</div><div class="mt-4">Conexiones (Origen → Destino)</div></div>';
+            } else if (viz === 'flowchart') {
+                headers = '<div class="grid grid-cols-3 gap-4 font-bold text-sm text-gray-600"><div>ID Paso</div><div>Texto</div><div>Siguiente ID</div></div>';
+            }
             
             formContainer.innerHTML = `<div id="form-rows" class="space-y-3">${headers}</div>`;
             
-            // Añadir 3 filas iniciales
-            for(let i=0; i<3; i++) addRow();
+            // Si mantenemos datos compatibles, restaurar
+            if (keepData && lastCompatibleData && COMPATIBLE_TYPES.includes(viz)) {
+                lastCompatibleData.forEach(row => {
+                    addRow(row.label, row.value);
+                });
+            } else {
+                // 3 filas iniciales
+                for(let i=0; i<3; i++) addRow();
+            }
         }
 
-        function addRow() {
+        function addRow(label = '', value = '') {
             const viz = vizSelect.value;
             const rowsContainer = document.getElementById('form-rows');
-            if (!rowsContainer || rowsContainer.querySelectorAll('.node-row, .data-row, .flow-row').length >= MAX_ROWS) return;
+            if (!rowsContainer) return;
+            
+            const currentRows = rowsContainer.querySelectorAll('.node-row, .data-row, .flow-row');
+            if (currentRows.length >= MAX_ROWS) return;
 
             const rowId = `row-${Date.now()}-${Math.random()}`;
             let html = '';
 
-            if (viz === 'bar' || viz === 'line') {
+            if (COMPATIBLE_TYPES.includes(viz)) {
                 html = `
                 <div class="data-row grid grid-cols-2 gap-4 items-end relative group">
                     <div>
-                        <input type="text" class="w-full p-2 border rounded input-label" placeholder="Ej: Enero">
+                        <input type="text" class="w-full p-2 border rounded input-label" placeholder="Ej: Enero" value="${label}">
                         <span class="error-msg">Requerido</span>
                     </div>
                     <div>
-                        <input type="number" class="w-full p-2 border rounded input-value" placeholder="Ej: 100">
+                        <input type="number" class="w-full p-2 border rounded input-value" placeholder="Ej: 100" value="${value}">
                         <span class="error-msg">Requerido (número)</span>
                     </div>
-                    <button onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
             } else if (viz === 'network') {
-                // Nodo
                 nodeIdCounter++;
                 html = `
                 <div class="node-row p-2 bg-gray-50 rounded border relative group">
@@ -169,9 +201,9 @@
                         <input type="hidden" class="input-node-id" value="${nodeIdCounter}">
                         <span class="error-msg">Nombre requerido</span>
                     </div>
-                    <button onclick="this.parentElement.parentElement.remove(); updateDropdowns()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                    <button type="button" onclick="this.parentElement.parentElement.remove(); updateDropdowns()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
-                // Si es la primera vez, añadir sección de conexiones
+                
                 if (!document.getElementById('conn-section')) {
                     html += `<div id="conn-section" class="mt-4 pt-4 border-t"><h4 class="font-bold text-sm mb-2">Conexiones</h4><div id="conn-rows" class="space-y-2"></div><button type="button" id="btn-add-conn" class="text-xs text-indigo-600 mt-2 underline">+ Añadir Conexión</button></div>`;
                 }
@@ -181,27 +213,24 @@
                     <div><input type="text" class="w-full p-2 border rounded input-flow-id" placeholder="A"></div>
                     <div><input type="text" class="w-full p-2 border rounded input-flow-text" placeholder="Inicio"></div>
                     <div><input type="text" class="w-full p-2 border rounded input-flow-next" placeholder="B (vacío si final)"></div>
-                    <button onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
             }
 
             rowsContainer.insertAdjacentHTML('beforeend', html);
 
-            // Listener especial para conexiones en Network
             if (viz === 'network' && document.getElementById('btn-add-conn')) {
                 document.getElementById('btn-add-conn').onclick = () => {
                     const connContainer = document.getElementById('conn-rows');
-                    const connId = `conn-${Date.now()}`;
                     const connHtml = `
                         <div class="conn-row grid grid-cols-2 gap-2 items-center relative group">
                             <select class="w-full p-2 border rounded input-conn-src"><option>Selecciona...</option></select>
                             <select class="w-full p-2 border rounded input-conn-dst"><option>Selecciona...</option></select>
-                            <button onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                            <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                         </div>`;
                     connContainer.insertAdjacentHTML('beforeend', connHtml);
                     updateDropdowns();
                 };
-                // Inicializar 1 conexión
                 if (!document.querySelector('.conn-row')) document.getElementById('btn-add-conn').click();
             }
         }
@@ -226,13 +255,12 @@
         function validate() {
             let isValid = true;
             const viz = vizSelect.value;
-            // Limpiar errores previos
             document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
             document.querySelectorAll('input, select').forEach(el => el.classList.remove('has-error'));
 
-            if (viz === 'bar' || viz === 'line') {
+            if (COMPATIBLE_TYPES.includes(viz)) {
                 const rows = document.querySelectorAll('.data-row');
-                if (rows.length === 0) { showAlert('Añade al menos 1 fila'); return false; }
+                if (rows.length === 0) { alert('Añade al menos 1 fila'); return false; }
                 rows.forEach(row => {
                     const label = row.querySelector('.input-label');
                     const value = row.querySelector('.input-value');
@@ -241,7 +269,7 @@
                 });
             } else if (viz === 'network') {
                 const nodes = document.querySelectorAll('.node-row');
-                if (nodes.length < 2) { showAlert('Mínimo 2 nodos para una red'); return false; }
+                if (nodes.length < 2) { alert('Mínimo 2 nodos para una red'); return false; }
                 nodes.forEach(row => {
                     const name = row.querySelector('.input-node-name');
                     if (!name.value.trim()) { showError(name); isValid = false; }
@@ -254,7 +282,7 @@
                 });
             } else if (viz === 'flowchart') {
                 const rows = document.querySelectorAll('.flow-row');
-                if (rows.length === 0) { showAlert('Añade al menos 1 paso'); return false; }
+                if (rows.length === 0) { alert('Añade al menos 1 paso'); return false; }
                 rows.forEach(row => {
                     const id = row.querySelector('.input-flow-id');
                     const text = row.querySelector('.input-flow-text');
@@ -270,30 +298,39 @@
             if (err) err.style.display = 'block';
         }
 
-        function showAlert(msg) {
-            alert(msg); // Fallback simple
-        }
-
         // --- GENERACIÓN ---
         async function handleGenerate() {
             if (!validate()) return;
             const viz = vizSelect.value;
-            chartContainer.innerHTML = ''; // Limpiar
+            chartContainer.innerHTML = '';
 
-            if (viz === 'bar' || viz === 'line') {
+            if (COMPATIBLE_TYPES.includes(viz)) {
                 const labels = [], data = [];
                 document.querySelectorAll('.data-row').forEach(row => {
                     labels.push(row.querySelector('.input-label').value);
                     data.push(parseFloat(row.querySelector('.input-value').value));
                 });
+                // Guardar para compatibilidad
+                lastCompatibleData = labels.map((l, i) => ({ label: l, value: data[i] }));
                 renderChart(viz, labels, data);
             } else if (viz === 'network') {
                 const nodes = [], edges = [];
                 document.querySelectorAll('.node-row').forEach(row => {
-                    nodes.push({ data: { id: row.querySelector('.input-node-id').value, label: row.querySelector('.input-node-name').value } });
+                    nodes.push({ 
+                        data: { 
+                            id: row.querySelector('.input-node-id').value, 
+                            label: row.querySelector('.input-node-name').value 
+                        } 
+                    });
                 });
                 document.querySelectorAll('.conn-row').forEach(row => {
-                    edges.push({ data: { source: row.querySelector('.input-conn-src').value, target: row.querySelector('.input-conn-dst').value } });
+                    // ✅ CORREGIDO: Single brace, no double
+                    edges.push({ 
+                        data: { 
+                            source: row.querySelector('.input-conn-src').value, 
+                            target: row.querySelector('.input-conn-dst').value 
+                        } 
+                    });
                 });
                 renderNetwork(nodes, edges);
             } else if (viz === 'flowchart') {
@@ -316,10 +353,32 @@
         function renderChart(type, labels, data) {
             const ctx = document.createElement('canvas');
             chartContainer.appendChild(ctx);
+            
+            const colors = [
+                'rgba(79, 70, 229, 0.7)',
+                'rgba(34, 197, 94, 0.7)',
+                'rgba(239, 68, 68, 0.7)',
+                'rgba(251, 146, 60, 0.7)',
+                'rgba(59, 130, 246, 0.7)'
+            ];
+            
             chartInstance = new Chart(ctx, {
                 type: type,
-                data: { labels, datasets: [{ label: 'Datos', data, backgroundColor: 'rgba(79, 70, 229, 0.5)', borderColor: 'rgba(79, 70, 229, 1)', borderWidth: 2 }] },
-                options: { responsive: true, maintainAspectRatio: false }
+                data: { 
+                    labels, 
+                    datasets: [{ 
+                        label: 'Datos', 
+                        data, 
+                        backgroundColor: type === 'pie' ? colors : 'rgba(79, 70, 229, 0.5)',
+                        borderColor: type === 'pie' ? '#fff' : 'rgba(79, 70, 229, 1)',
+                        borderWidth: 2 
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: type === 'pie' } }
+                }
             });
         }
 
@@ -328,10 +387,11 @@
                 container: chartContainer,
                 elements: [...nodes, ...edges],
                 style: [
-                    { selector: 'node', style: { 'label': 'data(label)', 'background-color': '#4f46e5', 'color': '#fff', 'text-valign': 'center', 'text-halign': 'center' } },
+                    { selector: 'node', style: { 'label': 'data(label)', 'background-color': '#4f46e5', 'color': '#fff', 'text-valign': 'center', 'text-halign': 'center', 'width': 40, 'height': 40 } },
                     { selector: 'edge', style: { 'width': 2, 'line-color': '#9ca3af', 'target-arrow-color': '#9ca3af', 'target-arrow-shape': 'triangle' } }
                 ],
-                layout: { name: 'grid' }
+                // ✅ CORREGIDO: Layout que respeta conexiones
+                layout: { name: 'cose', animate: true, nodeSpacing: 50 }
             });
         }
 
@@ -353,6 +413,7 @@
         }
 
         // Init
+        lastVizType = vizSelect.value;
         renderForm();
     </script>
 </body>
