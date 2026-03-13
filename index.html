@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador de Datos (MVP)</title>
+    <title>Visualizador de Datos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.25.0/dist/cytoscape.min.js"></script>
@@ -17,7 +17,8 @@
     <style>
         .error-msg { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: none; }
         .has-error { border-color: #ef4444; }
-        .node-row, .conn-row { transition: all 0.2s; }
+        .screen { display: none; }
+        .screen.active { display: block; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
@@ -28,45 +29,70 @@
 
     <main class="flex-1 p-4 max-w-5xl mx-auto w-full space-y-6">
         
-        <!-- Controles -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded shadow">
-            <div>
-                <label class="block text-sm font-medium mb-1">Visualización</label>
-                <select id="viz-type" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500">
-                    <option value="bar">Barras</option>
-                    <option value="line">Líneas</option>
-                    <option value="pie">Circular (Pastel)</option>
-                    <option value="network">Node-Link (Red)</option>
-                    <option value="flowchart">Flowchart</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Origen de Datos</label>
-                <div class="flex space-x-4 mt-2">
-                    <label class="flex items-center"><input type="radio" name="source" value="form" checked class="mr-2"> Formulario</label>
-                    <label class="flex items-center"><input type="radio" name="source" value="file" class="mr-2"> Archivo (CSV)</label>
+        <!-- ==================== PANTALLA 1: FORMULARIO ==================== -->
+        <div id="screen-form" class="screen active space-y-6">
+            
+            <!-- Controles -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded shadow">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Visualización</label>
+                    <select id="viz-type" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500">
+                        <option value="bar">Barras</option>
+                        <option value="line">Líneas</option>
+                        <option value="pie">Circular (Pastel)</option>
+                        <option value="network">Node-Link (Red)</option>
+                        <option value="flowchart">Flowchart</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Origen de Datos</label>
+                    <div class="flex space-x-4 mt-2">
+                        <label class="flex items-center"><input type="radio" name="source" value="form" checked class="mr-2"> Formulario</label>
+                        <label class="flex items-center"><input type="radio" name="source" value="file" class="mr-2"> Archivo (CSV)</label>
+                    </div>
                 </div>
             </div>
+
+            <!-- OPCIÓN DE ESCALA (solo Barras y Líneas) -->
+            <div id="scale-section" class="bg-white p-4 rounded shadow hidden">
+                <label class="block text-sm font-medium mb-2">Escala del Eje Y</label>
+                <div class="flex space-x-4">
+                    <label class="flex items-center"><input type="radio" name="scale" value="linear" checked class="mr-2"> Lineal</label>
+                    <label class="flex items-center"><input type="radio" name="scale" value="logarithmic" class="mr-2"> Logarítmica</label>
+                </div>
+            </div>
+
+            <!-- Formulario Dinámico -->
+            <div id="form-container" class="bg-white p-4 rounded shadow space-y-4">
+                <!-- Se inyecta vía JS -->
+            </div>
+
+            <!-- Acciones -->
+            <div class="flex justify-between items-center">
+                <button id="btn-add" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 font-medium">+ Añadir</button>
+                <button id="btn-generate" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold shadow">Generar Gráfico</button>
+            </div>
         </div>
 
-        <!-- Formulario Dinámico -->
-        <div id="form-container" class="bg-white p-4 rounded shadow space-y-4">
-            <!-- Se inyecta vía JS -->
+        <!-- ==================== PANTALLA 2: RESULTADO ==================== -->
+        <div id="screen-result" class="screen space-y-6">
+            
+            <!-- Header Resultado -->
+            <div class="flex justify-between items-center bg-white p-4 rounded shadow">
+                <button id="btn-back" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 font-medium">← Volver al Formulario</button>
+                <h2 class="text-lg font-bold text-gray-700">Resultado</h2>
+                <div class="w-32"></div> <!-- Spacer para centrar -->
+            </div>
+
+            <!-- Resultado -->
+            <div id="chart-container" class="bg-white p-4 rounded shadow min-h-[500px] flex items-center justify-center relative">
+                <p class="text-gray-400">El gráfico aparecerá aquí</p>
+            </div>
+
+            <!-- Download -->
+            <button id="btn-download" class="w-full py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-bold hidden">Descargar PNG</button>
         </div>
 
-        <!-- Acciones -->
-        <div class="flex justify-between items-center">
-            <button id="btn-add" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 font-medium">+ Añadir Fila</button>
-            <button id="btn-generate" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold shadow">Generar Gráfico</button>
-        </div>
-
-        <!-- Resultado -->
-        <div id="chart-container" class="bg-white p-4 rounded shadow min-h-[400px] flex items-center justify-center relative">
-            <p class="text-gray-400">El gráfico aparecerá aquí</p>
-        </div>
-
-        <!-- Download -->
-        <button id="btn-download" class="w-full py-3 bg-gray-800 text-white rounded hover:bg-gray-900 font-medium hidden">Descargar PNG</button>
     </main>
 
     <script>
@@ -75,8 +101,6 @@
         let cyInstance = null;
         let nodeIdCounter = 0;
         const MAX_ROWS = 20;
-        
-        // Tipos compatibles (mantienen datos al cambiar)
         const COMPATIBLE_TYPES = ['bar', 'line', 'pie'];
         let lastCompatibleData = null;
         let lastVizType = null;
@@ -89,20 +113,43 @@
         const btnDownload = document.getElementById('btn-download');
         const chartContainer = document.getElementById('chart-container');
         const sourceRadios = document.querySelectorAll('input[name="source"]');
+        const scaleSection = document.getElementById('scale-section');
+        const screenForm = document.getElementById('screen-form');
+        const screenResult = document.getElementById('screen-result');
+        const btnBack = document.getElementById('btn-back');
 
-        // --- INICIALIZACIÓN ---
+        // --- NAVIGATION ---
+        btnGenerate.addEventListener('click', () => {
+            if (validate()) {
+                handleGenerate();
+                screenForm.classList.remove('active');
+                screenResult.classList.add('active');
+                window.scrollTo(0, 0);
+            }
+        });
+
+        btnBack.addEventListener('click', () => {
+            screenResult.classList.remove('active');
+            screenForm.classList.add('active');
+            window.scrollTo(0, 0);
+        });
+
+        // --- EVENTS ---
         vizSelect.addEventListener('change', () => {
             const newType = vizSelect.value;
             const oldType = lastVizType;
-            
-            // ¿Mantener datos? Solo si ambos son compatibles (bar/line/pie)
-            const keepData = COMPATIBLE_TYPES.includes(newType) && 
-                            COMPATIBLE_TYPES.includes(oldType) && 
-                            lastCompatibleData;
+            const keepData = COMPATIBLE_TYPES.includes(newType) && COMPATIBLE_TYPES.includes(oldType) && lastCompatibleData;
             
             clearState(keepData);
             renderForm(keepData);
             lastVizType = newType;
+            
+            // Mostrar/ocultar escala
+            if (newType === 'bar' || newType === 'line') {
+                scaleSection.classList.remove('hidden');
+            } else {
+                scaleSection.classList.add('hidden');
+            }
         });
         
         sourceRadios.forEach(r => r.addEventListener('change', () => {
@@ -112,10 +159,9 @@
         }));
         
         btnAdd.addEventListener('click', addRow);
-        btnGenerate.addEventListener('click', handleGenerate);
         btnDownload.addEventListener('click', downloadPNG);
 
-        // --- LÓGICA PRINCIPAL ---
+        // --- LOGIC ---
         function clearState(keepData = false) {
             chartContainer.innerHTML = '<p class="text-gray-400">El gráfico aparecerá aquí</p>';
             btnDownload.classList.add('hidden');
@@ -147,23 +193,48 @@
             
             let headers = '';
             if (COMPATIBLE_TYPES.includes(viz)) {
-                headers = '<div class="grid grid-cols-2 gap-4 font-bold text-sm text-gray-600"><div>Etiqueta</div><div>Valor</div></div>';
+                headers = '<div class="grid grid-cols-2 gap-4 font-bold text-sm text-gray-600 mb-2"><div>Etiqueta</div><div>Valor</div></div>';
             } else if (viz === 'network') {
-                headers = '<div class="grid grid-cols-1 gap-2 font-bold text-sm text-gray-600"><div>Nodos (ID - Nombre)</div><div class="mt-4">Conexiones (Origen → Destino)</div></div>';
+                headers = '<div class="font-bold text-sm text-gray-600 mb-2">Nodos</div>';
             } else if (viz === 'flowchart') {
-                headers = '<div class="grid grid-cols-3 gap-4 font-bold text-sm text-gray-600"><div>ID Paso</div><div>Texto</div><div>Siguiente ID</div></div>';
+                headers = '<div class="grid grid-cols-3 gap-4 font-bold text-sm text-gray-600 mb-2"><div>ID Paso</div><div>Texto</div><div>Siguiente ID</div></div>';
             }
             
             formContainer.innerHTML = `<div id="form-rows" class="space-y-3">${headers}</div>`;
             
-            // Si mantenemos datos compatibles, restaurar
             if (keepData && lastCompatibleData && COMPATIBLE_TYPES.includes(viz)) {
-                lastCompatibleData.forEach(row => {
-                    addRow(row.label, row.value);
-                });
+                lastCompatibleData.forEach(row => addRow(row.label, row.value));
             } else {
-                // 3 filas iniciales
-                for(let i=0; i<3; i++) addRow();
+                if (viz === 'network') {
+                    addRow(); // 1 nodo inicial
+                    // Sección de conexiones separada
+                    setTimeout(() => {
+                        const connSection = document.createElement('div');
+                        connSection.id = 'conn-section';
+                        connSection.className = 'mt-6 pt-4 border-t';
+                        connSection.innerHTML = `
+                            <div class="font-bold text-sm text-gray-600 mb-2">Conexiones</div>
+                            <div id="conn-rows" class="space-y-2"></div>
+                            <button type="button" id="btn-add-conn" class="text-xs text-indigo-600 mt-2 underline">+ Añadir Conexión</button>
+                        `;
+                        document.getElementById('form-rows').appendChild(connSection);
+                        
+                        document.getElementById('btn-add-conn').onclick = () => {
+                            const connContainer = document.getElementById('conn-rows');
+                            const connHtml = `
+                                <div class="conn-row grid grid-cols-2 gap-2 items-center relative group">
+                                    <select class="w-full p-2 border rounded input-conn-src"><option>Selecciona...</option></select>
+                                    <select class="w-full p-2 border rounded input-conn-dst"><option>Selecciona...</option></select>
+                                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                                </div>`;
+                            connContainer.insertAdjacentHTML('beforeend', connHtml);
+                            updateDropdowns();
+                        };
+                        document.getElementById('btn-add-conn').click(); // 1 conexión inicial
+                    }, 0);
+                } else {
+                    for(let i=0; i<2; i++) addRow();
+                }
             }
         }
 
@@ -175,7 +246,7 @@
             const currentRows = rowsContainer.querySelectorAll('.node-row, .data-row, .flow-row');
             if (currentRows.length >= MAX_ROWS) return;
 
-            const rowId = `row-${Date.now()}-${Math.random()}`;
+            nodeIdCounter++;
             let html = '';
 
             if (COMPATIBLE_TYPES.includes(viz)) {
@@ -192,21 +263,16 @@
                     <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
             } else if (viz === 'network') {
-                nodeIdCounter++;
                 html = `
                 <div class="node-row p-2 bg-gray-50 rounded border relative group">
                     <div class="flex items-center space-x-2">
-                        <span class="font-mono text-xs text-gray-500 w-6">#${nodeIdCounter}</span>
+                        <span class="font-mono text-xs text-gray-500 w-8">#${nodeIdCounter}</span>
                         <input type="text" class="flex-1 p-2 border rounded input-node-name" placeholder="Nombre del Nodo">
                         <input type="hidden" class="input-node-id" value="${nodeIdCounter}">
                         <span class="error-msg">Nombre requerido</span>
                     </div>
-                    <button type="button" onclick="this.parentElement.parentElement.remove(); updateDropdowns()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                    <button type="button" onclick="this.parentElement.remove(); updateDropdowns()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
-                
-                if (!document.getElementById('conn-section')) {
-                    html += `<div id="conn-section" class="mt-4 pt-4 border-t"><h4 class="font-bold text-sm mb-2">Conexiones</h4><div id="conn-rows" class="space-y-2"></div><button type="button" id="btn-add-conn" class="text-xs text-indigo-600 mt-2 underline">+ Añadir Conexión</button></div>`;
-                }
             } else if (viz === 'flowchart') {
                 html = `
                 <div class="flow-row grid grid-cols-3 gap-4 items-end relative group">
@@ -218,20 +284,9 @@
             }
 
             rowsContainer.insertAdjacentHTML('beforeend', html);
-
-            if (viz === 'network' && document.getElementById('btn-add-conn')) {
-                document.getElementById('btn-add-conn').onclick = () => {
-                    const connContainer = document.getElementById('conn-rows');
-                    const connHtml = `
-                        <div class="conn-row grid grid-cols-2 gap-2 items-center relative group">
-                            <select class="w-full p-2 border rounded input-conn-src"><option>Selecciona...</option></select>
-                            <select class="w-full p-2 border rounded input-conn-dst"><option>Selecciona...</option></select>
-                            <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
-                        </div>`;
-                    connContainer.insertAdjacentHTML('beforeend', connHtml);
-                    updateDropdowns();
-                };
-                if (!document.querySelector('.conn-row')) document.getElementById('btn-add-conn').click();
+            
+            if (viz === 'network') {
+                updateDropdowns();
             }
         }
 
@@ -251,7 +306,6 @@
             });
         }
 
-        // --- VALIDACIÓN ---
         function validate() {
             let isValid = true;
             const viz = vizSelect.value;
@@ -298,9 +352,7 @@
             if (err) err.style.display = 'block';
         }
 
-        // --- GENERACIÓN ---
         async function handleGenerate() {
-            if (!validate()) return;
             const viz = vizSelect.value;
             chartContainer.innerHTML = '';
 
@@ -310,9 +362,10 @@
                     labels.push(row.querySelector('.input-label').value);
                     data.push(parseFloat(row.querySelector('.input-value').value));
                 });
-                // Guardar para compatibilidad
                 lastCompatibleData = labels.map((l, i) => ({ label: l, value: data[i] }));
-                renderChart(viz, labels, data);
+                
+                const scale = document.querySelector('input[name="scale"]:checked')?.value || 'linear';
+                renderChart(viz, labels, data, scale);
             } else if (viz === 'network') {
                 const nodes = [], edges = [];
                 document.querySelectorAll('.node-row').forEach(row => {
@@ -324,7 +377,6 @@
                     });
                 });
                 document.querySelectorAll('.conn-row').forEach(row => {
-                    // ✅ CORREGIDO: Single brace, no double
                     edges.push({ 
                         data: { 
                             source: row.querySelector('.input-conn-src').value, 
@@ -349,8 +401,7 @@
             btnDownload.classList.remove('hidden');
         }
 
-        // --- RENDERIZADO ---
-        function renderChart(type, labels, data) {
+        function renderChart(type, labels, data, scale) {
             const ctx = document.createElement('canvas');
             chartContainer.appendChild(ctx);
             
@@ -377,7 +428,13 @@
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: type === 'pie' } }
+                    plugins: { legend: { display: type === 'pie' } },
+                    scales: {
+                        y: {
+                            type: scale,
+                            beginAtZero: true
+                        }
+                    }
                 }
             });
         }
@@ -390,7 +447,6 @@
                     { selector: 'node', style: { 'label': 'data(label)', 'background-color': '#4f46e5', 'color': '#fff', 'text-valign': 'center', 'text-halign': 'center', 'width': 40, 'height': 40 } },
                     { selector: 'edge', style: { 'width': 2, 'line-color': '#9ca3af', 'target-arrow-color': '#9ca3af', 'target-arrow-shape': 'triangle' } }
                 ],
-                // ✅ CORREGIDO: Layout que respeta conexiones
                 layout: { name: 'cose', animate: true, nodeSpacing: 50 }
             });
         }
@@ -402,7 +458,6 @@
             chartContainer.querySelector('svg').style.height = '100%';
         }
 
-        // --- DESCARGA ---
         function downloadPNG() {
             html2canvas(chartContainer).then(canvas => {
                 const link = document.createElement('a');
