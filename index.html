@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador de Datos</title>
+    <title>GRAFIK</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.25.0/dist/cytoscape.min.js"></script>
@@ -14,86 +14,190 @@
         mermaid.initialize({ startOnLoad: false });
         window.mermaid = mermaid;
     </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        grafik: {
+                            bg: '#0a0a0a',
+                            card: '#1a1a1a',
+                            input: '#262626',
+                            accent: '#fbbf24',
+                            accentHover: '#f59e0b',
+                            text: '#e5e5e5',
+                            textMuted: '#737373'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        .error-msg { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: none; }
-        .has-error { border-color: #ef4444; }
+        body { background: #0a0a0a; color: #e5e5e5; }
         .screen { display: none; }
         .screen.active { display: block; }
+        .input-dark {
+            background: #262626;
+            border: 1px solid #404040;
+            color: #e5e5e5;
+        }
+        .input-dark:focus {
+            border-color: #fbbf24;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+        }
+        .input-dark::placeholder { color: #525252; }
+        .btn-grafik {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #0a0a0a;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .btn-grafik:hover {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .label-grafik {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #737373;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .section-title {
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: #fbbf24;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-left: 3px solid #fbbf24;
+            padding-left: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .select-dark {
+            background: #262626;
+            border: 1px solid #404040;
+            color: #fbbf24;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        .error-msg { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: none; }
+        .has-error { border-color: #ef4444 !important; }
+        .node-row, .conn-row, .data-row, .flow-row { 
+            transition: all 0.2s;
+            background: #1a1a1a;
+            border: 1px solid #404040;
+        }
+        .node-row:hover, .conn-row:hover, .data-row:hover, .flow-row:hover {
+            border-color: #fbbf24;
+        }
+        .btn-add {
+            color: #fbbf24;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .btn-add:hover { color: #f59e0b; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col">
 
-    <header class="bg-indigo-600 text-white p-4 shadow">
-        <h1 class="text-xl font-bold">Visualizador de Datos</h1>
+    <!-- Header -->
+    <header class="border-b border-gray-800 py-6">
+        <div class="max-w-4xl mx-auto px-4">
+            <h1 class="text-3xl font-bold text-center" style="color: #fbbf24; font-family: 'Courier New', monospace; letter-spacing: 8px;">
+                GRAFIK
+            </h1>
+            <div class="w-24 h-1 bg-gradient-to-r from-amber-400 to-transparent mx-auto mt-2"></div>
+        </div>
     </header>
 
-    <main class="flex-1 p-4 max-w-5xl mx-auto w-full space-y-6">
+    <main class="flex-1 p-4 max-w-4xl mx-auto w-full space-y-6">
         
         <!-- ==================== PANTALLA 1: FORMULARIO ==================== -->
         <div id="screen-form" class="screen active space-y-6">
             
-            <!-- Controles -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded shadow">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Visualización</label>
-                    <select id="viz-type" class="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500">
-                        <option value="bar">Barras</option>
-                        <option value="line">Líneas</option>
-                        <option value="pie">Circular (Pastel)</option>
-                        <option value="network">Node-Link (Red)</option>
-                        <option value="flowchart">Flowchart</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Origen de Datos</label>
-                    <div class="flex space-x-4 mt-2">
-                        <label class="flex items-center"><input type="radio" name="source" value="form" checked class="mr-2"> Formulario</label>
-                        <label class="flex items-center"><input type="radio" name="source" value="file" class="mr-2"> Archivo (CSV)</label>
-                    </div>
+            <!-- TIPOLOGÍA -->
+            <div class="bg-[#1a1a1a] p-6 rounded border border-gray-800">
+                <p class="label-grafik mb-3">TIPOLOGÍA // SELECCIONA</p>
+                <select id="viz-type" class="w-full p-4 select-dark rounded text-lg">
+                    <option value="bar">INDUSTRIAL_BARS</option>
+                    <option value="line">INDUSTRIAL_LINES</option>
+                    <option value="pie">INDUSTRIAL_PIE</option>
+                    <option value="network">NETWORK_GRAPH</option>
+                    <option value="flowchart">FLOW_DIAGRAM</option>
+                </select>
+            </div>
+
+            <!-- ORIGEN DE DATOS -->
+            <div class="bg-[#1a1a1a] p-6 rounded border border-gray-800">
+                <p class="label-grafik mb-3">ORIGEN DE DATOS // SOURCE</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="source-form" class="p-4 rounded font-bold text-sm tracking-wider bg-amber-400 text-black hover:bg-amber-500 transition">
+                        FORMULARIO
+                    </button>
+                    <button id="source-file" class="p-4 rounded font-bold text-sm tracking-wider bg-[#262626] text-gray-400 hover:bg-[#333] transition">
+                        CSV_IMPORT
+                    </button>
                 </div>
             </div>
 
-            <!-- OPCIÓN DE ESCALA (solo Barras y Líneas) -->
-            <div id="scale-section" class="bg-white p-4 rounded shadow hidden">
-                <label class="block text-sm font-medium mb-2">Escala del Eje Y</label>
-                <div class="flex space-x-4">
-                    <label class="flex items-center"><input type="radio" name="scale" value="linear" checked class="mr-2"> Lineal</label>
-                    <label class="flex items-center"><input type="radio" name="scale" value="logarithmic" class="mr-2"> Logarítmica</label>
-                </div>
+            <!-- ESCALA (solo Barras y Líneas) -->
+            <div id="scale-section" class="bg-[#1a1a1a] p-6 rounded border border-gray-800 hidden">
+                <p class="label-grafik mb-3">ESCALA EJE Y // INTERVAL</p>
+                <select id="scale-interval" class="w-full p-3 select-dark rounded">
+                    <option value="1">1 (Cada unidad)</option>
+                    <option value="5">5 (Cada 5 unidades)</option>
+                    <option value="10" selected>10 (Cada 10 unidades)</option>
+                    <option value="25">25 (Cada 25 unidades)</option>
+                    <option value="50">50 (Cada 50 unidades)</option>
+                    <option value="100">100 (Cada 100 unidades)</option>
+                </select>
             </div>
 
-            <!-- Formulario Dinámico -->
-            <div id="form-container" class="bg-white p-4 rounded shadow space-y-4">
+            <!-- FORMULARIO DINÁMICO -->
+            <div id="form-container" class="bg-[#1a1a1a] p-6 rounded border border-gray-800 space-y-4">
                 <!-- Se inyecta vía JS -->
             </div>
 
-            <!-- Acciones -->
-            <div class="flex justify-between items-center">
-                <button id="btn-add" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 font-medium">+ Añadir</button>
-                <button id="btn-generate" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold shadow">Generar Gráfico</button>
-            </div>
+            <!-- BOTÓN GENERAR -->
+            <button id="btn-generate" class="w-full btn-grafik py-4 rounded text-lg tracking-wider shadow-lg">
+                PROCESAR_GRAFO
+            </button>
         </div>
 
         <!-- ==================== PANTALLA 2: RESULTADO ==================== -->
         <div id="screen-result" class="screen space-y-6">
             
             <!-- Header Resultado -->
-            <div class="flex justify-between items-center bg-white p-4 rounded shadow">
-                <button id="btn-back" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 font-medium">← Volver al Formulario</button>
-                <h2 class="text-lg font-bold text-gray-700">Resultado</h2>
-                <div class="w-32"></div> <!-- Spacer para centrar -->
+            <div class="flex justify-between items-center bg-[#1a1a1a] p-4 rounded border border-gray-800">
+                <button id="btn-back" class="px-6 py-2 bg-[#262626] text-amber-400 rounded hover:bg-[#333] font-mono text-sm tracking-wider border border-gray-700">
+                    ← VOLVER
+                </button>
+                <h2 class="text-lg font-bold text-gray-300 font-mono tracking-wider">RESULTADO</h2>
+                <div class="w-24"></div>
             </div>
 
             <!-- Resultado -->
-            <div id="chart-container" class="bg-white p-4 rounded shadow min-h-[500px] flex items-center justify-center relative">
-                <p class="text-gray-400">El gráfico aparecerá aquí</p>
+            <div id="chart-container" class="bg-[#1a1a1a] p-6 rounded border border-gray-800 min-h-[500px] flex items-center justify-center relative">
+                <p class="text-gray-500 font-mono">ESPERANDO PROCESAMIENTO...</p>
             </div>
 
             <!-- Download -->
-            <button id="btn-download" class="w-full py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-bold hidden">Descargar PNG</button>
+            <button id="btn-download" class="w-full btn-grafik py-4 rounded text-lg tracking-wider shadow-lg hidden">
+                DESCARGAR_PNG
+            </button>
         </div>
 
     </main>
+
+    <footer class="border-t border-gray-800 py-4 mt-8">
+        <p class="text-center text-gray-600 font-mono text-xs tracking-wider">
+            GRAFIK v1.0 // INDUSTRIAL_DATA_VISUALIZATION
+        </p>
+    </footer>
 
     <script>
         // --- ESTADO ---
@@ -104,19 +208,21 @@
         const COMPATIBLE_TYPES = ['bar', 'line', 'pie'];
         let lastCompatibleData = null;
         let lastVizType = null;
+        let isFormSource = true;
 
         // --- DOM ---
         const vizSelect = document.getElementById('viz-type');
         const formContainer = document.getElementById('form-container');
-        const btnAdd = document.getElementById('btn-add');
         const btnGenerate = document.getElementById('btn-generate');
         const btnDownload = document.getElementById('btn-download');
         const chartContainer = document.getElementById('chart-container');
-        const sourceRadios = document.querySelectorAll('input[name="source"]');
         const scaleSection = document.getElementById('scale-section');
+        const scaleInterval = document.getElementById('scale-interval');
         const screenForm = document.getElementById('screen-form');
         const screenResult = document.getElementById('screen-result');
         const btnBack = document.getElementById('btn-back');
+        const sourceForm = document.getElementById('source-form');
+        const sourceFile = document.getElementById('source-file');
 
         // --- NAVIGATION ---
         btnGenerate.addEventListener('click', () => {
@@ -134,6 +240,28 @@
             window.scrollTo(0, 0);
         });
 
+        sourceForm.addEventListener('click', () => {
+            isFormSource = true;
+            sourceForm.classList.replace('bg-[#262626]', 'bg-amber-400');
+            sourceForm.classList.replace('text-gray-400', 'text-black');
+            sourceFile.classList.replace('bg-amber-400', 'bg-[#262626]');
+            sourceFile.classList.replace('text-black', 'text-gray-400');
+            clearState(false);
+            renderForm(false);
+            lastVizType = vizSelect.value;
+        });
+
+        sourceFile.addEventListener('click', () => {
+            isFormSource = false;
+            sourceFile.classList.replace('bg-[#262626]', 'bg-amber-400');
+            sourceFile.classList.replace('text-gray-400', 'text-black');
+            sourceForm.classList.replace('bg-amber-400', 'bg-[#262626]');
+            sourceForm.classList.replace('text-black', 'text-gray-400');
+            clearState(false);
+            renderForm(false);
+            lastVizType = vizSelect.value;
+        });
+
         // --- EVENTS ---
         vizSelect.addEventListener('change', () => {
             const newType = vizSelect.value;
@@ -144,26 +272,16 @@
             renderForm(keepData);
             lastVizType = newType;
             
-            // Mostrar/ocultar escala
             if (newType === 'bar' || newType === 'line') {
                 scaleSection.classList.remove('hidden');
             } else {
                 scaleSection.classList.add('hidden');
             }
         });
-        
-        sourceRadios.forEach(r => r.addEventListener('change', () => {
-            clearState(false);
-            renderForm(false);
-            lastVizType = vizSelect.value;
-        }));
-        
-        btnAdd.addEventListener('click', addRow);
-        btnDownload.addEventListener('click', downloadPNG);
 
         // --- LOGIC ---
         function clearState(keepData = false) {
-            chartContainer.innerHTML = '<p class="text-gray-400">El gráfico aparecerá aquí</p>';
+            chartContainer.innerHTML = '<p class="text-gray-500 font-mono">ESPERANDO PROCESAMIENTO...</p>';
             btnDownload.classList.add('hidden');
             if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
             if (cyInstance) { cyInstance.destroy(); cyInstance = null; }
@@ -177,60 +295,59 @@
 
         function renderForm(keepData = false) {
             const viz = vizSelect.value;
-            const isFile = document.querySelector('input[name="source"]:checked').value === 'file';
             
-            if (isFile) {
+            if (!isFormSource) {
                 formContainer.innerHTML = `
-                    <div class="p-4 border-2 border-dashed border-gray-300 rounded text-center">
-                        <p class="mb-2">Sube un CSV con columnas: <code>label, value</code> (o <code>source, target</code> para redes)</p>
-                        <input type="file" id="file-input" accept=".csv" class="mx-auto">
+                    <div class="p-6 border-2 border-dashed border-gray-700 rounded text-center">
+                        <p class="mb-4 text-gray-400 font-mono text-sm">SUBE ARCHIVO CSV CON COLUMNAS: <span class="text-amber-400">label, value</span></p>
+                        <input type="file" id="file-input" accept=".csv" class="mx-auto input-dark p-2 rounded">
                     </div>`;
-                btnAdd.classList.add('hidden');
                 return;
             }
 
-            btnAdd.classList.remove('hidden');
+            let html = '';
             
-            let headers = '';
             if (COMPATIBLE_TYPES.includes(viz)) {
-                headers = '<div class="grid grid-cols-2 gap-4 font-bold text-sm text-gray-600 mb-2"><div>Etiqueta</div><div>Valor</div></div>';
+                html = '<p class="section-title">DATOS // VALUES</p><div id="form-rows" class="space-y-3"></div>';
             } else if (viz === 'network') {
-                headers = '<div class="font-bold text-sm text-gray-600 mb-2">Nodos</div>';
+                html = '<p class="section-title">NODOS // NODES</p><div id="form-rows" class="space-y-3"></div>';
             } else if (viz === 'flowchart') {
-                headers = '<div class="grid grid-cols-3 gap-4 font-bold text-sm text-gray-600 mb-2"><div>ID Paso</div><div>Texto</div><div>Siguiente ID</div></div>';
+                html = '<p class="section-title">FLUJO // FLOW</p><div id="form-rows" class="space-y-3"></div>';
             }
             
-            formContainer.innerHTML = `<div id="form-rows" class="space-y-3">${headers}</div>`;
+            formContainer.innerHTML = html;
             
             if (keepData && lastCompatibleData && COMPATIBLE_TYPES.includes(viz)) {
                 lastCompatibleData.forEach(row => addRow(row.label, row.value));
             } else {
                 if (viz === 'network') {
-                    addRow(); // 1 nodo inicial
-                    // Sección de conexiones separada
+                    addRow();
                     setTimeout(() => {
                         const connSection = document.createElement('div');
                         connSection.id = 'conn-section';
-                        connSection.className = 'mt-6 pt-4 border-t';
+                        connSection.className = 'mt-6 pt-6 border-t border-gray-700';
                         connSection.innerHTML = `
-                            <div class="font-bold text-sm text-gray-600 mb-2">Conexiones</div>
-                            <div id="conn-rows" class="space-y-2"></div>
-                            <button type="button" id="btn-add-conn" class="text-xs text-indigo-600 mt-2 underline">+ Añadir Conexión</button>
+                            <p class="section-title">CONEXIONES // CONNECTIONS</p>
+                            <div id="conn-rows" class="space-y-3"></div>
+                            <button type="button" id="btn-add-conn" class="btn-add mt-3 flex items-center">
+                                <span class="w-5 h-5 border border-amber-400 rounded flex items-center justify-center mr-2">+</span>
+                                AÑADIR_CONEXIÓN
+                            </button>
                         `;
                         document.getElementById('form-rows').appendChild(connSection);
                         
                         document.getElementById('btn-add-conn').onclick = () => {
                             const connContainer = document.getElementById('conn-rows');
                             const connHtml = `
-                                <div class="conn-row grid grid-cols-2 gap-2 items-center relative group">
-                                    <select class="w-full p-2 border rounded input-conn-src"><option>Selecciona...</option></select>
-                                    <select class="w-full p-2 border rounded input-conn-dst"><option>Selecciona...</option></select>
-                                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                                <div class="conn-row p-3 rounded grid grid-cols-2 gap-3 relative group">
+                                    <select class="w-full p-2 select-dark rounded input-conn-src"><option value="">SELECCIONA_ORIGEN</option></select>
+                                    <select class="w-full p-2 select-dark rounded input-conn-dst"><option value="">SELECCIONA_DESTINO</option></select>
+                                    <button type="button" onclick="this.parentElement.remove(); updateDropdowns()" class="absolute -right-2 -top-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                                 </div>`;
                             connContainer.insertAdjacentHTML('beforeend', connHtml);
                             updateDropdowns();
                         };
-                        document.getElementById('btn-add-conn').click(); // 1 conexión inicial
+                        document.getElementById('btn-add-conn').click();
                     }, 0);
                 } else {
                     for(let i=0; i<2; i++) addRow();
@@ -251,35 +368,35 @@
 
             if (COMPATIBLE_TYPES.includes(viz)) {
                 html = `
-                <div class="data-row grid grid-cols-2 gap-4 items-end relative group">
+                <div class="data-row p-3 rounded grid grid-cols-2 gap-3 relative group">
                     <div>
-                        <input type="text" class="w-full p-2 border rounded input-label" placeholder="Ej: Enero" value="${label}">
-                        <span class="error-msg">Requerido</span>
+                        <input type="text" class="w-full p-2 input-dark rounded" placeholder="ETIQUETA" value="${label}">
+                        <span class="error-msg">REQUERIDO</span>
                     </div>
                     <div>
-                        <input type="number" class="w-full p-2 border rounded input-value" placeholder="Ej: 100" value="${value}">
-                        <span class="error-msg">Requerido (número)</span>
+                        <input type="number" class="w-full p-2 input-dark rounded" placeholder="VALOR" value="${value}">
+                        <span class="error-msg">REQUERIDO</span>
                     </div>
-                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
             } else if (viz === 'network') {
                 html = `
-                <div class="node-row p-2 bg-gray-50 rounded border relative group">
-                    <div class="flex items-center space-x-2">
-                        <span class="font-mono text-xs text-gray-500 w-8">#${nodeIdCounter}</span>
-                        <input type="text" class="flex-1 p-2 border rounded input-node-name" placeholder="Nombre del Nodo">
+                <div class="node-row p-3 rounded relative group">
+                    <div class="flex items-center space-x-3">
+                        <span class="font-mono text-xs text-amber-400 w-10">ID_${String(nodeIdCounter).padStart(2, '0')}</span>
+                        <input type="text" class="flex-1 p-2 input-dark rounded input-node-name" placeholder="NOMBRE_NODO">
                         <input type="hidden" class="input-node-id" value="${nodeIdCounter}">
-                        <span class="error-msg">Nombre requerido</span>
+                        <span class="error-msg">REQUERIDO</span>
                     </div>
-                    <button type="button" onclick="this.parentElement.remove(); updateDropdowns()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                    <button type="button" onclick="this.parentElement.remove(); updateDropdowns()" class="absolute -right-2 -top-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
             } else if (viz === 'flowchart') {
                 html = `
-                <div class="flow-row grid grid-cols-3 gap-4 items-end relative group">
-                    <div><input type="text" class="w-full p-2 border rounded input-flow-id" placeholder="A"></div>
-                    <div><input type="text" class="w-full p-2 border rounded input-flow-text" placeholder="Inicio"></div>
-                    <div><input type="text" class="w-full p-2 border rounded input-flow-next" placeholder="B (vacío si final)"></div>
-                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
+                <div class="flow-row p-3 rounded grid grid-cols-3 gap-3 relative group">
+                    <div><input type="text" class="w-full p-2 input-dark rounded input-flow-id" placeholder="ID (A)"></div>
+                    <div><input type="text" class="w-full p-2 input-dark rounded input-flow-text" placeholder="TEXTO"></div>
+                    <div><input type="text" class="w-full p-2 input-dark rounded input-flow-next" placeholder="SIGUIENTE (vacío=fin)"></div>
+                    <button type="button" onclick="this.parentElement.remove()" class="absolute -right-2 -top-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">×</button>
                 </div>`;
             }
 
@@ -293,9 +410,9 @@
         function updateDropdowns() {
             const selects = document.querySelectorAll('.input-conn-src, .input-conn-dst');
             const nodes = document.querySelectorAll('.node-row');
-            let options = '<option value="">Selecciona...</option>';
+            let options = '<option value="">SELECCIONA...</option>';
             nodes.forEach((row, idx) => {
-                const name = row.querySelector('.input-node-name').value || `Nodo ${idx+1}`;
+                const name = row.querySelector('.input-node-name').value || `NODO_${idx+1}`;
                 const id = row.querySelector('.input-node-id').value;
                 options += `<option value="${id}">${id} - ${name}</option>`;
             });
@@ -314,16 +431,15 @@
 
             if (COMPATIBLE_TYPES.includes(viz)) {
                 const rows = document.querySelectorAll('.data-row');
-                if (rows.length === 0) { alert('Añade al menos 1 fila'); return false; }
+                if (rows.length === 0) { alert('AÑADE_AL_MENOS_1_FILA'); return false; }
                 rows.forEach(row => {
-                    const label = row.querySelector('.input-label');
-                    const value = row.querySelector('.input-value');
-                    if (!label.value.trim()) { showError(label); isValid = false; }
-                    if (!value.value.trim() || isNaN(value.value)) { showError(value); isValid = false; }
+                    const inputs = row.querySelectorAll('input');
+                    if (!inputs[0].value.trim()) { showError(inputs[0]); isValid = false; }
+                    if (!inputs[1].value.trim() || isNaN(inputs[1].value)) { showError(inputs[1]); isValid = false; }
                 });
             } else if (viz === 'network') {
                 const nodes = document.querySelectorAll('.node-row');
-                if (nodes.length < 2) { alert('Mínimo 2 nodos para una red'); return false; }
+                if (nodes.length < 2) { alert('MINIMO_2_NODOS'); return false; }
                 nodes.forEach(row => {
                     const name = row.querySelector('.input-node-name');
                     if (!name.value.trim()) { showError(name); isValid = false; }
@@ -336,7 +452,7 @@
                 });
             } else if (viz === 'flowchart') {
                 const rows = document.querySelectorAll('.flow-row');
-                if (rows.length === 0) { alert('Añade al menos 1 paso'); return false; }
+                if (rows.length === 0) { alert('AÑADE_AL_MENOS_1_PASO'); return false; }
                 rows.forEach(row => {
                     const id = row.querySelector('.input-flow-id');
                     const text = row.querySelector('.input-flow-text');
@@ -359,13 +475,14 @@
             if (COMPATIBLE_TYPES.includes(viz)) {
                 const labels = [], data = [];
                 document.querySelectorAll('.data-row').forEach(row => {
-                    labels.push(row.querySelector('.input-label').value);
-                    data.push(parseFloat(row.querySelector('.input-value').value));
+                    const inputs = row.querySelectorAll('input');
+                    labels.push(inputs[0].value);
+                    data.push(parseFloat(inputs[1].value));
                 });
                 lastCompatibleData = labels.map((l, i) => ({ label: l, value: data[i] }));
                 
-                const scale = document.querySelector('input[name="scale"]:checked')?.value || 'linear';
-                renderChart(viz, labels, data, scale);
+                const interval = parseInt(scaleInterval.value);
+                renderChart(viz, labels, data, interval);
             } else if (viz === 'network') {
                 const nodes = [], edges = [];
                 document.querySelectorAll('.node-row').forEach(row => {
@@ -401,16 +518,16 @@
             btnDownload.classList.remove('hidden');
         }
 
-        function renderChart(type, labels, data, scale) {
+        function renderChart(type, labels, data, interval) {
             const ctx = document.createElement('canvas');
             chartContainer.appendChild(ctx);
             
             const colors = [
-                'rgba(79, 70, 229, 0.7)',
-                'rgba(34, 197, 94, 0.7)',
-                'rgba(239, 68, 68, 0.7)',
-                'rgba(251, 146, 60, 0.7)',
-                'rgba(59, 130, 246, 0.7)'
+                'rgba(251, 191, 36, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(168, 85, 247, 0.8)'
             ];
             
             chartInstance = new Chart(ctx, {
@@ -418,21 +535,34 @@
                 data: { 
                     labels, 
                     datasets: [{ 
-                        label: 'Datos', 
+                        label: 'DATOS', 
                         data, 
-                        backgroundColor: type === 'pie' ? colors : 'rgba(79, 70, 229, 0.5)',
-                        borderColor: type === 'pie' ? '#fff' : 'rgba(79, 70, 229, 1)',
+                        backgroundColor: type === 'pie' ? colors : 'rgba(251, 191, 36, 0.6)',
+                        borderColor: type === 'pie' ? '#1a1a1a' : '#fbbf24',
                         borderWidth: 2 
                     }] 
                 },
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: type === 'pie' } },
+                    plugins: { 
+                        legend: { 
+                            display: type === 'pie',
+                            labels: { color: '#e5e5e5', font: { family: 'Courier New' } }
+                        }
+                    },
                     scales: {
                         y: {
-                            type: scale,
-                            beginAtZero: true
+                            ticks: { 
+                                color: '#737373',
+                                font: { family: 'Courier New' },
+                                stepSize: interval
+                            },
+                            grid: { color: '#404040' }
+                        },
+                        x: {
+                            ticks: { color: '#737373', font: { family: 'Courier New' } },
+                            grid: { color: '#404040' }
                         }
                     }
                 }
@@ -444,8 +574,29 @@
                 container: chartContainer,
                 elements: [...nodes, ...edges],
                 style: [
-                    { selector: 'node', style: { 'label': 'data(label)', 'background-color': '#4f46e5', 'color': '#fff', 'text-valign': 'center', 'text-halign': 'center', 'width': 40, 'height': 40 } },
-                    { selector: 'edge', style: { 'width': 2, 'line-color': '#9ca3af', 'target-arrow-color': '#9ca3af', 'target-arrow-shape': 'triangle' } }
+                    { 
+                        selector: 'node', 
+                        style: { 
+                            'label': 'data(label)', 
+                            'background-color': '#fbbf24', 
+                            'color': '#0a0a0a', 
+                            'text-valign': 'center', 
+                            'text-halign': 'center',
+                            'width': 50,
+                            'height': 50,
+                            'font-family': 'Courier New',
+                            'font-weight': 'bold'
+                        } 
+                    },
+                    { 
+                        selector: 'edge', 
+                        style: { 
+                            'width': 2, 
+                            'line-color': '#737373', 
+                            'target-arrow-color': '#737373', 
+                            'target-arrow-shape': 'triangle' 
+                        } 
+                    }
                 ],
                 layout: { name: 'cose', animate: true, nodeSpacing: 50 }
             });
@@ -454,14 +605,16 @@
         async function renderFlowchart(definition) {
             const { svg } = await window.mermaid.render('mermaid-svg', definition);
             chartContainer.innerHTML = svg;
-            chartContainer.querySelector('svg').style.width = '100%';
-            chartContainer.querySelector('svg').style.height = '100%';
+            const svgEl = chartContainer.querySelector('svg');
+            svgEl.style.width = '100%';
+            svgEl.style.height = '100%';
+            svgEl.style.background = '#1a1a1a';
         }
 
         function downloadPNG() {
             html2canvas(chartContainer).then(canvas => {
                 const link = document.createElement('a');
-                link.download = 'visualizacion.png';
+                link.download = 'GRAFIK_EXPORT.png';
                 link.href = canvas.toDataURL();
                 link.click();
             });
